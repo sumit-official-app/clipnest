@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f7f8fc">
+  <meta name="description" content="Check Instagram, YouTube, and TikTok links and find the official way to save videos you have permission to download.">
+  <title>Clipnest - Save videos the right way</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="shell topbar">
+    <a class="brand" href="#" aria-label="Clipnest home">
+      <span class="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M7 4.8v14.4L19 12 7 4.8Z" fill="currentColor"/></svg>
+      </span>
+      clipnest
+    </a>
+    <div class="nav-note">
+      <span class="shield" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M12 3 19 6v5c0 4.5-2.9 8.2-7 10-4.1-1.8-7-5.5-7-10V6l7-3Z" stroke="currentColor" stroke-width="1.7"/><path d="m9 12 2 2 4-4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+      Private link check
+    </div>
+  </header>
+
+  <main>
+    <section class="shell hero" aria-labelledby="page-title">
+      <div class="eyebrow"><span class="eyebrow-dot"></span> YOUR VIDEOS, YOUR WAY</div>
+      <h1 id="page-title">Save the videos<br><span>you love.</span></h1>
+      <p class="hero-copy">Check a link from your favorite platform and find the official way to save videos you own or have permission to download.</p>
+    </section>
+
+    <section class="shell" aria-label="Video link checker">
+      <form class="tool-card" id="link-form" novalidate>
+        <label class="field-label" id="platform-label">Choose a platform</label>
+        <div class="platforms" role="group" aria-labelledby="platform-label">
+          <button class="platform" type="button" data-platform="instagram" aria-pressed="false">
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="3.2" y="3.2" width="17.6" height="17.6" rx="5.2" stroke="currentColor" stroke-width="1.8"/><circle cx="12" cy="12" r="4.1" stroke="currentColor" stroke-width="1.8"/><circle cx="17.8" cy="6.5" r="1.1" fill="currentColor"/></svg>
+            <span class="platform-name">Instagram</span>
+          </button>
+          <button class="platform" type="button" data-platform="youtube" aria-pressed="true">
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M21 7.2a2.8 2.8 0 0 0-2-2C17.2 4.7 12 4.7 12 4.7s-5.2 0-7 .5a2.8 2.8 0 0 0-2 2A29 29 0 0 0 2.5 12a29 29 0 0 0 .5 4.8 2.8 2.8 0 0 0 2 2c1.8.5 7 .5 7 .5s5.2 0 7-.5a2.8 2.8 0 0 0 2-2 29 29 0 0 0 .5-4.8 29 29 0 0 0-.5-4.8Z" stroke="currentColor" stroke-width="1.6"/><path d="m10 15.5 5-3.5-5-3.5v7Z" fill="currentColor"/></svg>
+            <span class="platform-name">YouTube</span>
+          </button>
+          <button class="platform" type="button" data-platform="tiktok" aria-pressed="false">
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M15.2 3.2c.4 2.3 1.7 3.8 4 4.1v3.2a9.3 9.3 0 0 1-4-1.2v6.2a5.8 5.8 0 1 1-5.8-5.8c.4 0 .8 0 1.2.1v3.4a2.6 2.6 0 1 0 1.3 2.3V3.2h3.3Z" fill="currentColor"/></svg>
+            <span class="platform-name">TikTok</span>
+          </button>
+        </div>
+
+        <label class="field-label" for="video-url">Paste your video link</label>
+        <div class="input-row">
+          <svg class="link-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M10 13.5a4.5 4.5 0 0 0 6.4 0l3-3A4.5 4.5 0 0 0 13 4.1l-1.7 1.7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M14 10.5a4.5 4.5 0 0 0-6.4 0l-3 3A4.5 4.5 0 0 0 11 19.9l1.7-1.7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+          <input id="video-url" type="url" inputmode="url" autocomplete="url" placeholder="https://www.youtube.com/watch?v=..." aria-describedby="input-hint" required>
+          <button class="paste-button" id="paste-button" type="button">Paste</button>
+          <button class="check-button" type="submit">
+            Check link
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+        </div>
+        <p class="input-hint" id="input-hint" aria-live="polite">Supports youtube.com and youtu.be video links.</p>
+        <div class="status" id="status" role="status" aria-live="polite"></div>
+        <p class="privacy-note">
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3 19 6v5c0 4.5-2.9 8.2-7 10-4.1-1.8-7-5.5-7-10V6l7-3Z" stroke="currentColor" stroke-width="1.8"/><path d="m9 12 2 2 4-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Your link is checked in your browser and is not uploaded.
+        </p>
+      </form>
+      <aside class="ad-slot" aria-label="Advertisement space">
+        <span class="ad-label">ADVERTISEMENT</span>
+        <span class="ad-placeholder">AdSense display banner appears here after your site is approved and configured.</span>
+      </aside>
+      <div class="platform-strip" aria-label="Supported platforms">
+        <span>Instagram</span><span>YouTube</span><span>TikTok</span>
+      </div>
+      <section class="preview" id="video-preview" aria-live="polite" hidden>
+        <h2 id="preview-title">Video preview</h2>
+        <div class="preview-frame" id="preview-frame"></div>
+        <div class="download-action" id="download-action"></div>
+        <p class="download-note">This opens the original platform. Downloading is available only when allowed by the platform and the creator.</p>
+      </section>
+    </section>
+
+    <section class="shell features" aria-label="How Clipnest works">
+      <article class="feature">
+        <span class="feature-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><circle cx="10.8" cy="10.8" r="6.8" stroke="currentColor" stroke-width="1.8"/><path d="m16 16 4.5 4.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="m8.5 10.8 1.6 1.6 3.2-3.2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+        <h2>Right platform, every time</h2>
+        <p>We check that your link matches the platform you selected before you continue.</p>
+      </article>
+      <article class="feature">
+        <span class="feature-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M12 3v12m0 0 4-4m-4 4-4-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 16v3a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></span>
+        <h2>Official saving options</h2>
+        <p>Continue on the original platform and use the download features it provides.</p>
+      </article>
+      <article class="feature">
+        <span class="feature-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M12 3 19 6v5c0 4.5-2.9 8.2-7 10-4.1-1.8-7-5.5-7-10V6l7-3Z" stroke="currentColor" stroke-width="1.8"/><path d="m9 12 2 2 4-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+        <h2>Privacy by design</h2>
+        <p>Link validation happens on this page. No account or video upload is needed.</p>
+      </article>
+    </section>
+  </main>
+
+  <footer class="shell footer">
+    <p>&copy; 2026 Clipnest. Made for your own videos and content you have permission to save.</p>
+    <p>We don't remove watermarks or bypass platform download restrictions.</p>
+  </footer>
+
+  <script src="script.js" defer></script>
+</body>
+</html>
