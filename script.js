@@ -1,42 +1,4 @@
 (() => {
-  const platforms = {
-    instagram: {
-      name: "Instagram",
-      placeholder: "https://www.instagram.com/reel/...",
-      hint: "Supports instagram.com post, reel, and TV links.",
-      hosts: ["instagram.com", "www.instagram.com", "m.instagram.com"],
-      matches: path => /^\/(p|reel|reels|tv)\/[A-Za-z0-9_-]+\/?/i.test(path),
-      guidance: "Use Instagram's in-app save or download options when available. You can only save content when you have permission; creator download settings still apply.",
-      official: "https://www.instagram.com/"
-    },
-    youtube: {
-      name: "YouTube",
-      placeholder: "https://www.youtube.com/watch?v=...",
-      hint: "Supports youtube.com and youtu.be video links.",
-      hosts: ["youtube.com", "www.youtube.com", "m.youtube.com", "youtu.be", "www.youtu.be"],
-      matches: (path, url) => {
-        if (["youtu.be", "www.youtu.be"].includes(url.hostname)) return /^\/[A-Za-z0-9_-]{11}\/?$/.test(path);
-        return /^\/(watch|shorts|embed|live)\/?/i.test(path) &&
-          (path.toLowerCase() !== "/watch" || /^[A-Za-z0-9_-]{11}$/.test(url.searchParams.get("v") || "")) &&
-          (path.toLowerCase() === "/watch" || /^\/(shorts|embed|live)\/[A-Za-z0-9_-]{11}\/?$/i.test(path));
-      },
-      guidance: "For your own videos, download them from YouTube Studio. YouTube Premium may offer offline viewing in the app. Availability depends on your account and region.",
-      official: "https://www.youtube.com/"
-    },
-    tiktok: {
-      name: "TikTok",
-      placeholder: "https://www.tiktok.com/@creator/video/...",
-      hint: "Supports tiktok.com video links and TikTok share links.",
-      hosts: ["tiktok.com", "www.tiktok.com", "m.tiktok.com", "vm.tiktok.com", "vt.tiktok.com"],
-      matches: (path, url) => {
-        if (["vm.tiktok.com", "vt.tiktok.com"].includes(url.hostname)) return /^\/[A-Za-z0-9]+\/?$/.test(path);
-        return /^\/(@[^/]+\/video\/\d+|t\/[A-Za-z0-9]+)\/?$/i.test(path);
-      },
-      guidance: "Open the video in TikTok and choose Share > Save video when the creator allows downloads. TikTok's own download may include its watermark.",
-      official: "https://www.tiktok.com/"
-    }
-  };
-
   const form = document.querySelector("#link-form");
   const input = document.querySelector("#video-url");
   const status = document.querySelector("#status");
@@ -44,13 +6,11 @@
   const previewFrame = document.querySelector("#preview-frame");
   const downloadAction = document.querySelector("#download-action");
   const hint = document.querySelector("#input-hint");
-  const platformButtons = [...document.querySelectorAll(".platform")];
 
   const adOverlay = document.querySelector("#ad-overlay");
   const adCloseBtn = document.querySelector("#ad-close-btn");
   const adTimer = document.querySelector("#ad-timer");
 
-  let selectedPlatform = "youtube";
   let pendingCallback = null;
 
   // Interstitial Ad Modal Timer Logic
@@ -85,131 +45,196 @@
     }
   });
 
-  const setPlatform = (key) => {
-    selectedPlatform = key;
-    const platform = platforms[key];
-    platformButtons.forEach(button => button.setAttribute("aria-pressed", String(button.dataset.platform === key)));
-    input.placeholder = platform.placeholder;
-    hint.textContent = platform.hint;
-    status.className = "status";
-    status.textContent = "";
-    preview.hidden = true;
-    previewFrame.replaceChildren();
-    downloadAction.replaceChildren();
-  };
+  // Force direct file download into Gallery / Downloads folder using Blob Conversion
+  const downloadVideoFile = async (url, btnElement) => {
+    const originalText = btnElement.innerHTML;
+    btnElement.innerHTML = `<span>⏳ Downloading to Gallery...</span>`;
+    btnElement.disabled = true;
+    btnElement.style.opacity = "0.7";
 
-  const parseMatchingLink = (raw, platform) => {
-    let url;
     try {
-      url = new URL(raw.trim());
-    } catch {
-      return false;
+      let blob = null;
+
+      // 1. Direct Blob fetch from fbcdn.net (fbcdn has Access-Control-Allow-Origin: *)
+      try {
+        const response = await fetch(url);
+        if (response.ok) {
+          blob = await response.blob();
+        }
+      } catch (e) {
+        console.warn("Direct blob fetch error:", e);
+      }
+
+      // 2. Fallback via CORS Proxy if direct fetch fails
+      if (!blob) {
+        try {
+          const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
+          const response2 = await fetch(proxyUrl);
+          if (response2.ok) {
+            blob = await response2.blob();
+          }
+        } catch (e) {
+          console.warn("Proxy fetch error:", e);
+        }
+      }
+
+      if (blob) {
+        // Convert Blob to Same-Origin Local URL -> Chrome CANNOT play in tab, MUST download
+        const blobUrl = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = blobUrl;
+        a.download = "instagram_reel.mp4";
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+
+        setTimeout(() => URL.revokeObjectURL(blobUrl), 10000);
+
+        btnElement.innerHTML = `<span>✅ Saved to Gallery!</span>`;
+        setTimeout(() => {
+          btnElement.innerHTML = originalText;
+          btnElement.disabled = false;
+          btnElement.style.opacity = "1";
+        }, 3000);
+        return;
+      }
+
+      // 3. Fallback: Force anchor download attribute without tab redirection
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "instagram_reel.mp4";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+
+      btnElement.innerHTML = `<span>✅ Video Downloading...</span>`;
+      setTimeout(() => {
+        btnElement.innerHTML = originalText;
+        btnElement.disabled = false;
+        btnElement.style.opacity = "1";
+      }, 3000);
+    } catch (err) {
+      btnElement.innerHTML = originalText;
+      btnElement.disabled = false;
+      btnElement.style.opacity = "1";
     }
-    if (!["https:", "http:"].includes(url.protocol) || url.username || url.password) return false;
-    if (!platform.hosts.includes(url.hostname.toLowerCase())) return false;
-    return platform.matches(url.pathname, url);
   };
 
-  const getEmbedUrl = (platformKey, url) => {
-    if (platformKey === "youtube") {
-      const videoId = ["youtu.be", "www.youtu.be"].includes(url.hostname.toLowerCase())
-        ? url.pathname.slice(1).split("/")[0]
-        : url.searchParams.get("v") || url.pathname.split("/").filter(Boolean).pop();
-      return { src: `https://www.youtube-nocookie.com/embed/${videoId}`, vertical: false };
-    }
-    if (platformKey === "instagram") {
-      const match = url.pathname.match(/^\/(p|reel|reels|tv)\/([^/]+)/i);
-      return match ? { src: `https://www.instagram.com/${match[1]}/${match[2]}/embed/`, vertical: true } : null;
-    }
-    if (platformKey === "tiktok") {
-      const match = url.pathname.match(/\/video\/(\d+)/i);
-      return match ? { src: `https://www.tiktok.com/player/v1/${match[1]}`, vertical: true } : null;
-    }
-    return null;
-  };
+  // RapidAPI High-Speed Instagram Reel Extraction
+  const processInstagramVideo = async (instaUrl) => {
+    status.className = "status is-visible";
+    status.innerHTML = `<p class="status-heading">⏳ Extracting video...</p><p class="status-copy">Please wait a few seconds while we generate your download link.</p>`;
+    preview.hidden = true;
 
-  const showPreview = (platformKey, platform, safeUrl) => {
-    const embed = getEmbedUrl(platformKey, safeUrl);
-    previewFrame.classList.toggle("is-vertical", Boolean(embed && embed.vertical));
-    if (embed) {
-      const iframe = document.createElement("iframe");
-      iframe.src = embed.src;
-      iframe.title = `${platform.name} video preview`;
-      iframe.loading = "lazy";
-      iframe.referrerPolicy = "strict-origin-when-cross-origin";
-      iframe.allow = "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture";
-      iframe.allowFullscreen = true;
-      previewFrame.replaceChildren(iframe);
-    } else {
-      const fallback = document.createElement("div");
-      fallback.className = "preview-fallback";
-      const message = document.createElement("p");
-      message.textContent = `This share link can't be previewed here. Open it on ${platform.name} to view the video.`;
-      fallback.append(message);
-      previewFrame.replaceChildren(fallback);
-    }
-
-    const link = document.createElement("a");
-    link.className = "official-button";
-    link.href = "#";
-    link.textContent = "Download now";
-    link.addEventListener("click", (e) => {
-      e.preventDefault();
-      // Show Interstitial Ad before opening download URL
-      triggerAdModal(() => {
-        window.open(safeUrl.href, "_blank", "noopener,noreferrer");
+    try {
+      const apiUrl = `https://instagram-reels-downloader-api.p.rapidapi.com/download?url=${encodeURIComponent(instaUrl)}`;
+      const response = await fetch(apiUrl, {
+        method: "GET",
+        headers: {
+          "x-rapidapi-host": "instagram-reels-downloader-api.p.rapidapi.com",
+          "x-rapidapi-key": "598dedb630mshe61888c36bee6ddp1a5cf6jsn1353e2108b40"
+        }
       });
-    });
 
-    downloadAction.replaceChildren(link);
-    preview.hidden = false;
-  };
+      if (!response.ok) {
+        throw new Error(`Server returned status ${response.statusCode || response.status}`);
+      }
 
-  const renderStatus = (valid, platform, safeUrl, platformKey) => {
-    status.className = `status is-visible${valid ? "" : " is-error"}`;
-    if (!valid) {
-      status.innerHTML = `<p class="status-heading"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.8"/><path d="M12 7v5m0 4h.01" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>That doesn't look like a ${platform.name} video link</p><p class="status-copy">Choose the matching platform and paste a valid video URL to continue.</p>`;
-      preview.hidden = true;
-      return;
-    }
-    status.replaceChildren();
-    const heading = document.createElement("p");
-    heading.className = "status-heading";
-    heading.innerHTML = '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m5 12 4.5 4.5L19 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-    heading.append(document.createTextNode(`${platform.name} link looks good`));
-    const copy = document.createElement("p");
-    copy.className = "status-copy";
-    copy.textContent = platform.guidance;
-    status.append(heading, copy);
-    showPreview(platformKey, platform, safeUrl);
-  };
+      const json = await response.json();
 
-  platformButtons.forEach(button => button.addEventListener("click", () => setPlatform(button.dataset.platform)));
+      if (json.success && json.data) {
+        let mp4Url = null;
 
-  form.addEventListener("submit", event => {
-    event.preventDefault();
-    const platform = platforms[selectedPlatform];
-    const raw = input.value.trim();
-    if (!raw) {
+        if (Array.isArray(json.data.medias)) {
+          const videoItem = json.data.medias.find(m => m.type === "video" && m.url);
+          if (videoItem) {
+            mp4Url = videoItem.url;
+          } else if (json.data.medias[0] && json.data.medias[0].url) {
+            mp4Url = json.data.medias[0].url;
+          }
+        }
+
+        if (mp4Url) {
+          // 1. Render Clean HTML5 Video Player
+          previewFrame.replaceChildren();
+          const videoElement = document.createElement("video");
+          videoElement.src = mp4Url;
+          if (json.data.thumbnail) {
+            videoElement.poster = json.data.thumbnail;
+          }
+          videoElement.controls = true;
+          videoElement.autoplay = true;
+          videoElement.playsInline = true;
+          videoElement.style.width = "100%";
+          videoElement.style.maxHeight = "480px";
+          videoElement.style.borderRadius = "12px";
+          videoElement.style.backgroundColor = "#000000";
+          previewFrame.appendChild(videoElement);
+
+          // 2. Render Download Button & Instructions
+          downloadAction.replaceChildren();
+
+          const btnContainer = document.createElement("div");
+          btnContainer.style.display = "flex";
+          btnContainer.style.flexDirection = "column";
+          btnContainer.style.alignItems = "center";
+          btnContainer.style.gap = "10px";
+          btnContainer.style.width = "100%";
+
+          const downloadBtn = document.createElement("button");
+          downloadBtn.type = "button";
+          downloadBtn.className = "official-button";
+          downloadBtn.style.backgroundColor = "#25d366";
+          downloadBtn.style.color = "#ffffff";
+          downloadBtn.style.fontWeight = "bold";
+          downloadBtn.style.fontSize = "16px";
+          downloadBtn.style.padding = "14px 28px";
+          downloadBtn.style.borderRadius = "10px";
+          downloadBtn.style.border = "none";
+          downloadBtn.style.cursor = "pointer";
+          downloadBtn.style.display = "inline-flex";
+          downloadBtn.style.alignItems = "center";
+          downloadBtn.style.gap = "8px";
+          downloadBtn.innerHTML = `<span>⬇️ Download Video</span>`;
+
+          downloadBtn.addEventListener("click", () => {
+            downloadVideoFile(mp4Url, downloadBtn);
+          });
+
+          btnContainer.appendChild(downloadBtn);
+          downloadAction.appendChild(btnContainer);
+
+          status.className = "status is-visible";
+          status.innerHTML = `<p class="status-heading" style="color: #25d366;">✅ Video Ready!</p><p class="status-copy">Click the button below to save the video to your device.</p>`;
+          preview.hidden = false;
+          return;
+        }
+      }
+
+      throw new Error(json.message || "Video stream not found in API response.");
+    } catch (err) {
       status.className = "status is-visible is-error";
-      status.innerHTML = '<p class="status-heading">Paste a video link to get started</p><p class="status-copy">The link is checked locally in your browser.</p>';
+      status.innerHTML = `<p class="status-heading">❌ Extraction Failed</p><p class="status-copy">${err.message || "Please check your Instagram link and try again."}</p>`;
+      preview.hidden = true;
+    }
+  };
+
+  form.addEventListener("submit", (event) => {
+    event.preventDefault();
+    const raw = input.value.trim();
+
+    if (!raw || !raw.toLowerCase().includes("instagram.com")) {
+      status.className = "status is-visible is-error";
+      status.innerHTML = `<p class="status-heading">Please paste a valid Instagram video link</p><p class="status-copy">Example: https://www.instagram.com/reel/...</p>`;
       preview.hidden = true;
       input.focus();
       return;
     }
-    let safeUrl;
-    try { safeUrl = new URL(raw); } catch { safeUrl = null; }
 
-    const isValid = Boolean(safeUrl && parseMatchingLink(raw, platform));
-
-    if (isValid) {
-      // Trigger 3-second Ad Overlay before revealing preview
-      triggerAdModal(() => {
-        renderStatus(true, platform, safeUrl, selectedPlatform);
-      });
-    } else {
-      renderStatus(false, platform, safeUrl, selectedPlatform);
-    }
+    // Trigger Ad Overlay first, then process video
+    triggerAdModal(() => {
+      processInstagramVideo(raw);
+    });
   });
 
   input.addEventListener("input", () => {
@@ -231,11 +256,11 @@
         input.dispatchEvent(new Event("input", { bubbles: true }));
       } else {
         input.focus();
-        hint.textContent = "Clipboard is empty. Paste your link here.";
+        hint.textContent = "Clipboard is empty. Paste your Instagram link here.";
       }
     } catch {
       input.focus();
-      hint.textContent = "Clipboard access is unavailable. Paste your link here.";
+      hint.textContent = "Clipboard access unavailable. Paste your link here.";
     }
   });
 })();
