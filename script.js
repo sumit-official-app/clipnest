@@ -45,7 +45,45 @@
   const downloadAction = document.querySelector("#download-action");
   const hint = document.querySelector("#input-hint");
   const platformButtons = [...document.querySelectorAll(".platform")];
+
+  const adOverlay = document.querySelector("#ad-overlay");
+  const adCloseBtn = document.querySelector("#ad-close-btn");
+  const adTimer = document.querySelector("#ad-timer");
+
   let selectedPlatform = "youtube";
+  let pendingCallback = null;
+
+  // Interstitial Ad Modal Timer Logic
+  const triggerAdModal = (callback) => {
+    pendingCallback = callback;
+    let timeLeft = 3;
+    adTimer.textContent = String(timeLeft);
+    adCloseBtn.disabled = true;
+    adCloseBtn.textContent = `Skip Ad in ${timeLeft}s`;
+    adOverlay.hidden = false;
+
+    const countdown = setInterval(() => {
+      timeLeft -= 1;
+      if (timeLeft <= 0) {
+        clearInterval(countdown);
+        adCloseBtn.disabled = false;
+        adCloseBtn.textContent = "Close Ad ✖";
+      } else {
+        adTimer.textContent = String(timeLeft);
+        adCloseBtn.textContent = `Skip Ad in ${timeLeft}s`;
+      }
+    }, 1000);
+  };
+
+  adCloseBtn.addEventListener("click", () => {
+    if (adCloseBtn.disabled) return;
+    adOverlay.hidden = true;
+    if (typeof pendingCallback === "function") {
+      const cb = pendingCallback;
+      pendingCallback = null;
+      cb();
+    }
+  });
 
   const setPlatform = (key) => {
     selectedPlatform = key;
@@ -113,10 +151,16 @@
 
     const link = document.createElement("a");
     link.className = "official-button";
-    link.href = safeUrl.href;
-    link.target = "_blank";
-    link.rel = "noopener noreferrer";
+    link.href = "#";
     link.textContent = "Download now";
+    link.addEventListener("click", (e) => {
+      e.preventDefault();
+      // Show Interstitial Ad before opening download URL
+      triggerAdModal(() => {
+        window.open(safeUrl.href, "_blank", "noopener,noreferrer");
+      });
+    });
+
     downloadAction.replaceChildren(link);
     preview.hidden = false;
   };
@@ -155,7 +199,17 @@
     }
     let safeUrl;
     try { safeUrl = new URL(raw); } catch { safeUrl = null; }
-    renderStatus(Boolean(safeUrl && parseMatchingLink(raw, platform)), platform, safeUrl, selectedPlatform);
+
+    const isValid = Boolean(safeUrl && parseMatchingLink(raw, platform));
+
+    if (isValid) {
+      // Trigger 3-second Ad Overlay before revealing preview
+      triggerAdModal(() => {
+        renderStatus(true, platform, safeUrl, selectedPlatform);
+      });
+    } else {
+      renderStatus(false, platform, safeUrl, selectedPlatform);
+    }
   });
 
   input.addEventListener("input", () => {
